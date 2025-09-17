@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 export const fetchRepos = createAsyncThunk("github/fetchRepos", async ()=> {
-    const res = await fetch("http://api.github.com/users/HaritonovEvgenyi/repos");
+    const res = await fetch("https://api.github.com/users/HaritonovEvgenyi/repos");
     return await res.json();
 })
 
