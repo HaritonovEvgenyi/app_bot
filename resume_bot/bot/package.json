@@ -14,7 +14,7 @@
     "telegraf",
     "resume"
   ],
-  "author": "ТВОЁ_ИМЯ",
+  "author": "Евгений",
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

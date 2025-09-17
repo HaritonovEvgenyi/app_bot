@@ -5,6 +5,10 @@ dotenv.config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN!);
 
+
+
 commandsBot(bot)
 
-bot.launch();
+bot.launch()
+  .then(() => console.log("Бот запущен локально"))
+  .catch(console.error);

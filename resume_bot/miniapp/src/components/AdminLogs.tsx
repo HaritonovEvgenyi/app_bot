@@ -25,8 +25,8 @@ export default function AdminLogs() {
     useEffect(() => {
         //@ts-ignore
         const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-        // console.log(window.Telegram?.WebApp);
-        if (tgUser === ADMIN_ID) {
+        console.log(tgUser);
+        if (tgUser?.id === ADMIN_ID) {
             setAllowed(true)
             fetchLogs();
         } else {
