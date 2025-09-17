@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
+// Supabase
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL!,
   import.meta.env.VITE_SUPABASE_ANON_KEY!
@@ -22,7 +23,7 @@ export default function AdminLogs() {
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
 
-  // Загрузка логов
+  // Функция для загрузки логов
   async function fetchLogs() {
     const { data, error } = await supabase
       .from("logs")
@@ -32,59 +33,62 @@ export default function AdminLogs() {
 
     if (error) console.error("Ошибка загрузки логов:", error);
     else setLogs(data as Log[]);
+
     setLoading(false);
   }
 
-  // Сохраняем лог пользователя
+  // Функция для сохранения логов
   async function saveLog(log: Omit<Log, "id">) {
     const { error } = await supabase.from("logs").insert([log]);
     if (error) console.error("Ошибка записи лога:", error);
-    else fetchLogs(); // обновляем таблицу
+    else fetchLogs();
   }
 
-useEffect(() => {
-  const tgWebApp = window.Telegram?.WebApp;
+  useEffect(() => {
+    console.log("tgWebApp:", window.Telegram?.WebApp);
+    console.log("tgUser:", window.Telegram?.WebApp?.initDataUnsafe?.user);
+  }, [])
 
-  if (!tgWebApp) {
-    console.warn("Telegram WebApp недоступен");
-    setLoading(false);
-    return;
-  }
+  useEffect(() => {
+    const tgWebApp = window.Telegram?.WebApp;
 
-  tgWebApp.ready();
-
-  // Ждем небольшой таймаут, чтобы WebApp точно инициализировался
-  setTimeout(() => {
-    const tgUser = tgWebApp.initDataUnsafe?.user;
-
-    if (!tgUser) {
-      console.warn("Telegram user не определен");
+    if (!tgWebApp) {
+      console.warn("Telegram WebApp недоступен. Открывай через Mini App.");
       setLoading(false);
       return;
     }
 
-    // Сохраняем лог пользователя
-    saveLog({
-      user_id: tgUser.id,
-      username: tgUser.username || null,
-      first_name: tgUser.first_name || null,
-      last_name: tgUser.last_name || null,
-      date: new Date().toISOString(),
-    });
+    // Ждем готовности WebApp (100ms обычно достаточно)
+    setTimeout(() => {
+      const tgUser = tgWebApp.initDataUnsafe?.user;
 
-    // Проверяем админа
-    if (tgUser.id === ADMIN_ID) {
-      setAllowed(true);
-      fetchLogs();
-    } else {
-      setAllowed(false);
-      setLoading(false);
-    }
-  }, 100); // 100ms обычно достаточно
-}, []);
+      if (!tgUser) {
+        console.warn("Telegram user не определен. WebApp не передал данные.");
+        setLoading(false);
+        return;
+      }
 
+      // Сохраняем лог пользователя
+      saveLog({
+        user_id: tgUser.id,
+        username: tgUser.username || null,
+        first_name: tgUser.first_name || null,
+        last_name: tgUser.last_name || null,
+        date: new Date().toISOString(),
+      });
 
-  if (loading) return <p>Загрузка логов ...</p>;
+      // Проверяем админа
+      if (tgUser.id === ADMIN_ID) {
+        setAllowed(true);
+        fetchLogs();
+      } else {
+        setAllowed(false);
+        setLoading(false);
+      }
+    }, 100);
+  }, []);
+
+  if (loading) return <p>Загрузка логов...</p>;
   if (!allowed) return <p>Доступа нет, вы не админ</p>;
 
   return (
