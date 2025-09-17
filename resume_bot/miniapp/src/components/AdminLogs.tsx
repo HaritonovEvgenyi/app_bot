@@ -23,8 +23,6 @@ export default function AdminLogs() {
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
 
-  const isDev = import.meta.env.MODE === "development";
-
   // Загрузка логов
   async function fetchLogs() {
     try {
@@ -61,19 +59,17 @@ export default function AdminLogs() {
   }
 
 useEffect(() => {
-    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    console.log("Telegram user:", tgUser);
-
-    if (tgUser) {
-        // Сохраняем лог в Supabase
-        saveLog({
-            user_id: tgUser.id,
-            username: tgUser.username || null,
-            first_name: tgUser.first_name || null,
-            last_name: tgUser.last_name || null,
-            date: new Date().toISOString(),
-        });
+    if (!window.Telegram?.WebApp) {
+        console.warn("Telegram WebApp недоступен");
+        setLoading(false);
+        return;
     }
+
+    window.Telegram.WebApp.onEvent("mainButtonClicked", () => {});
+    window.Telegram.WebApp.ready(); // гарантируем инициализацию
+
+    const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+    console.log("Telegram user:", tgUser);
 
     if (tgUser?.id === ADMIN_ID) {
         setAllowed(true);
