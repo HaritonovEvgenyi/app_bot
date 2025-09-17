@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-// Supabase
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL!,
   import.meta.env.VITE_SUPABASE_ANON_KEY!
@@ -25,83 +24,67 @@ export default function AdminLogs() {
 
   // Загрузка логов
   async function fetchLogs() {
-    try {
-      const { data, error } = await supabase
-        .from("logs")
-        .select("*")
-        .order("date", { ascending: false })
-        .limit(50);
+    const { data, error } = await supabase
+      .from("logs")
+      .select("*")
+      .order("date", { ascending: false })
+      .limit(50);
 
-      console.log("Supabase data:", data);
-      console.log("Supabase error:", error);
+    if (error) console.error("Ошибка загрузки логов:", error);
+    else setLogs(data as Log[]);
+    setLoading(false);
+  }
 
-      if (error) console.error("Ошибка загрузки логов:", error);
-      else setLogs(data as Log[]);
-    } catch (err) {
-      console.error("Ошибка fetchLogs:", err);
-    } finally {
+  // Сохраняем лог пользователя
+  async function saveLog(log: Omit<Log, "id">) {
+    const { error } = await supabase.from("logs").insert([log]);
+    if (error) console.error("Ошибка записи лога:", error);
+    else fetchLogs(); // обновляем таблицу
+  }
+
+  useEffect(() => {
+    const tgWebApp = window.Telegram?.WebApp;
+
+    if (!tgWebApp) {
+      console.warn("Telegram WebApp недоступен");
+      setLoading(false);
+      return;
+    }
+
+    tgWebApp.ready(); // Ждем инициализации WebApp
+    const tgUser = tgWebApp.initDataUnsafe?.user;
+
+    if (!tgUser) {
+      console.warn("Telegram user не определен");
+      setLoading(false);
+      return;
+    }
+
+    // Сохраняем лог пользователя
+    saveLog({
+      user_id: tgUser.id,
+      username: tgUser.username || null,
+      first_name: tgUser.first_name || null,
+      last_name: tgUser.last_name || null,
+      date: new Date().toISOString(),
+    });
+
+    // Проверяем админа
+    if (tgUser.id === ADMIN_ID) {
+      setAllowed(true);
+      fetchLogs();
+    } else {
+      setAllowed(false);
       setLoading(false);
     }
-  }
-
-  // Добавление нового лога
-  async function saveLog(log: Omit<Log, "id">) {
-    try {
-      const { data, error } = await supabase.from("logs").insert([log]);
-      if (error) console.error("Ошибка записи лога:", error);
-      else {
-        console.log("Лог успешно записан:", data);
-        fetchLogs(); // обновляем таблицу после добавления
-      }
-    } catch (err) {
-      console.error("Ошибка saveLog:", err);
-    }
-  }
-
-useEffect(() => {
-    if (!window.Telegram?.WebApp) {
-        console.warn("Telegram WebApp недоступен");
-        setLoading(false);
-        return;
-    }
-
-    window.Telegram.WebApp.onEvent("mainButtonClicked", () => {});
-    window.Telegram.WebApp.ready(); // гарантируем инициализацию
-
-    const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
-    console.log("Telegram user:", tgUser);
-
-    if (tgUser?.id === ADMIN_ID) {
-        setAllowed(true);
-        fetchLogs();
-    } else {
-        setAllowed(false);
-        setLoading(false);
-    }
-}, []);
+  }, []);
 
   if (loading) return <p>Загрузка логов ...</p>;
-  if (allowed) return <p>Доступа нет, вы не админ</p>;
+  if (!allowed) return <p>Доступа нет, вы не админ</p>;
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Логи пользователей бота</h1>
-
-      {/* Кнопка для добавления тестового лога */}
-      <button
-        onClick={() =>
-          saveLog({
-            user_id: 12345,
-            username: "testuser",
-            first_name: "Test",
-            last_name: "User",
-            date: new Date().toISOString(),
-          })
-        }
-      >
-        Добавить тестовый лог
-      </button>
-
       <table border={1} cellPadding={5} style={{ marginTop: 10 }}>
         <thead>
           <tr>
