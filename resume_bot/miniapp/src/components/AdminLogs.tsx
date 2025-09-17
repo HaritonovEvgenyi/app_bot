@@ -25,13 +25,14 @@ export default function AdminLogs() {
     useEffect(() => {
         //@ts-ignore
         const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-        if (tgUser === ADMIN_ID) {
+        console.log(window.Telegram?.WebApp);
+        if (tgUser.id === ADMIN_ID) {
             setAllowed(true)
             fetchLogs();
         } else {
             setLoading(false)
          }
-    }, [allowed])
+    }, [])
 
     async function fetchLogs() {
             const { data, error} = await supabase.from("logs").select("*").order("date", {ascending: false}).limit(50)

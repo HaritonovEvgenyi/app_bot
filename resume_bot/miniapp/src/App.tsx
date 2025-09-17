@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import ProjectList from "./components/ProjectList";
+import AdminLogs from "./components/AdminLogs";
 
 function App() {
 
@@ -17,6 +18,7 @@ function App() {
       <h1> Привет, я фронтенд разработчик</h1>
       <h2>Мои проекты:</h2>
       <ProjectList />
+      <AdminLogs />
     </div>
   )
 }
