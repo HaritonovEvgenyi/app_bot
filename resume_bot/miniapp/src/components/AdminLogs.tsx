@@ -81,7 +81,7 @@ useEffect(() => {
 }, []);
 
   if (loading) return <p>Загрузка логов ...</p>;
-  if (!allowed) return <p>Доступа нет, вы не админ</p>;
+  if (allowed) return <p>Доступа нет, вы не админ</p>;
 
   return (
     <div style={{ padding: 20 }}>
