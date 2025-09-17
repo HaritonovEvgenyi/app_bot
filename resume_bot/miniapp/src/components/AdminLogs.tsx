@@ -69,13 +69,16 @@ export default function AdminLogs() {
       }
 
       // Сохраняем лог пользователя
-      saveLog({
+      if (tgUser) {
+             saveLog({
         user_id: tgUser.id,
         username: tgUser.username || null,
         first_name: tgUser.first_name || null,
         last_name: tgUser.last_name || null,
         date: new Date().toISOString(),
       });
+      }
+ 
 
       // Проверяем админа
       if (tgUser.id === ADMIN_ID) {
@@ -85,7 +88,7 @@ export default function AdminLogs() {
         setAllowed(false);
         setLoading(false);
       }
-    }, 100);
+    }, 300);
   }, []);
 
   if (loading) return <p>Загрузка логов...</p>;
