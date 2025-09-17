@@ -42,16 +42,19 @@ export default function AdminLogs() {
     else fetchLogs(); // обновляем таблицу
   }
 
-  useEffect(() => {
-    const tgWebApp = window.Telegram?.WebApp;
+useEffect(() => {
+  const tgWebApp = window.Telegram?.WebApp;
 
-    if (!tgWebApp) {
-      console.warn("Telegram WebApp недоступен");
-      setLoading(false);
-      return;
-    }
+  if (!tgWebApp) {
+    console.warn("Telegram WebApp недоступен");
+    setLoading(false);
+    return;
+  }
 
-    tgWebApp.ready(); // Ждем инициализации WebApp
+  tgWebApp.ready();
+
+  // Ждем небольшой таймаут, чтобы WebApp точно инициализировался
+  setTimeout(() => {
     const tgUser = tgWebApp.initDataUnsafe?.user;
 
     if (!tgUser) {
@@ -77,7 +80,9 @@ export default function AdminLogs() {
       setAllowed(false);
       setLoading(false);
     }
-  }, []);
+  }, 100); // 100ms обычно достаточно
+}, []);
+
 
   if (loading) return <p>Загрузка логов ...</p>;
   if (!allowed) return <p>Доступа нет, вы не админ</p>;
