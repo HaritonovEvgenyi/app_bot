@@ -7,7 +7,11 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY!
 );
 
-const ADMIN_ID = Number(import.meta.env.VITE_ADMIN_ID) || 74097192;
+const ADMIN_IDS: number[] = ((import.meta.env.VITE_ADMIN_IDS as string) || (import.meta.env.VITE_ADMIN_ID as string) || "")
+  .split(",")
+  .map((s) => Number(String(s).trim()))
+  .filter((n) => Number.isFinite(n));
+const FALLBACK_ADMIN_ID = 74097192;
 
 type AnalyticsEvent = {
   id: number;
@@ -26,6 +30,7 @@ export default function AdminLogs() {
   const [events, setEvents] = useState<AnalyticsEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<{ userId?: number; adminIds?: number[] }>({});
   const [limit, setLimit] = useState(50);
   const [onlyErrors, setOnlyErrors] = useState(false);
 
@@ -82,7 +87,9 @@ export default function AdminLogs() {
         return;
       }
 
-      if (tgUser.id === ADMIN_ID) {
+      const effectiveAdminIds = ADMIN_IDS.length > 0 ? ADMIN_IDS : [FALLBACK_ADMIN_ID];
+      setDebugInfo({ userId: tgUser.id, adminIds: effectiveAdminIds });
+      if (effectiveAdminIds.includes(tgUser.id)) {
         setAllowed(true);
         fetchEvents();
       } else {
@@ -93,7 +100,20 @@ export default function AdminLogs() {
   }, []);
 
   if (loading) return <p>Загрузка...</p>;
-  if (!allowed) return <p>Доступ запрещён</p>;
+  if (!allowed)
+    return (
+      <div style={{ padding: 20 }}>
+        <p>Доступ запрещён</p>
+        {debugInfo.userId !== undefined && (
+          <p style={{ opacity: 0.7, fontSize: 12 }}>
+            Ваш user_id: {debugInfo.userId}. Разрешённые admin IDs: {debugInfo.adminIds?.join(", ") || "нет"}
+          </p>
+        )}
+        <p style={{ opacity: 0.7, fontSize: 12 }}>
+          Задайте VITE_ADMIN_ID или VITE_ADMIN_IDS=comma,separated в .env мини-приложения, затем пересоберите.
+        </p>
+      </div>
+    );
 
   return (
     <div style={{ padding: 20 }}>
