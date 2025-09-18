@@ -73,10 +73,53 @@ export default function AdminLogs() {
     setLoading(false);
   }
 
+  function extractUserFromUrlHash(): { id: number } | null {
+    try {
+      const rawHash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
+      const hashParams = new URLSearchParams(rawHash);
+      const tgWebAppData = hashParams.get("tgWebAppData");
+      if (!tgWebAppData) return null;
+      const inner = new URLSearchParams(tgWebAppData);
+      const userEncoded = inner.get("user");
+      if (!userEncoded) return null;
+      const userJson = decodeURIComponent(userEncoded);
+      const user = JSON.parse(userJson);
+      if (user && typeof user.id !== "undefined") {
+        return { id: Number(user.id) };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   useEffect(() => {
     const tgWebApp = (window as any)?.Telegram?.WebApp;
     if (!tgWebApp) {
       console.warn("Telegram WebApp недоступен. Открывай через Mini App.");
+      // Fallback: попробуем взять user из tgWebAppData в URL (актуально для Telegram Desktop)
+      const urlUser = extractUserFromUrlHash();
+      if (urlUser && Number.isFinite(Number(urlUser.id))) {
+        const effectiveAdminIds = ADMIN_IDS.length > 0 ? ADMIN_IDS : [FALLBACK_ADMIN_ID];
+        const currentUserId = Number(urlUser.id);
+        setDebugInfo((d) => ({
+          ...d,
+          hasTelegram: false,
+          hasUser: true,
+          envAdminId: String(import.meta.env.VITE_ADMIN_ID ?? ""),
+          envAdminIds: String(import.meta.env.VITE_ADMIN_IDS ?? ""),
+          adminIds: effectiveAdminIds,
+          ua: navigator.userAgent,
+          href: window.location.href,
+          allowLocalDebug: ALLOW_LOCAL_DEBUG,
+          userId: currentUserId,
+        }));
+        if (effectiveAdminIds.includes(currentUserId)) {
+          setAllowed(true);
+          fetchEvents();
+          return;
+        }
+      }
       setDebugInfo((d) => ({
         ...d,
         hasTelegram: false,
@@ -107,6 +150,29 @@ export default function AdminLogs() {
       const tgUser = tgWebApp.initDataUnsafe?.user;
       if (!tgUser) {
         console.warn("Telegram user не определен. WebApp не передал данные.");
+        // Fallback: попробуем взять user из tgWebAppData в URL
+        const urlUser = extractUserFromUrlHash();
+        if (urlUser && Number.isFinite(Number(urlUser.id))) {
+          const effectiveAdminIds = ADMIN_IDS.length > 0 ? ADMIN_IDS : [FALLBACK_ADMIN_ID];
+          const currentUserId = Number(urlUser.id);
+          setDebugInfo((d) => ({
+            ...d,
+            hasTelegram: true,
+            hasUser: true,
+            envAdminId: String(import.meta.env.VITE_ADMIN_ID ?? ""),
+            envAdminIds: String(import.meta.env.VITE_ADMIN_IDS ?? ""),
+            adminIds: effectiveAdminIds,
+            ua: navigator.userAgent,
+            href: window.location.href,
+            allowLocalDebug: ALLOW_LOCAL_DEBUG,
+            userId: currentUserId,
+          }));
+          if (effectiveAdminIds.includes(currentUserId)) {
+            setAllowed(true);
+            fetchEvents();
+            return;
+          }
+        }
         setDebugInfo((d) => ({
           ...d,
           hasTelegram: true,
