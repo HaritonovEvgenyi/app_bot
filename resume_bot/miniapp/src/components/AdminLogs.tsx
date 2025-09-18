@@ -30,7 +30,7 @@ export default function AdminLogs() {
   const [events, setEvents] = useState<AnalyticsEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<{ userId?: number; adminIds?: number[] }>({});
+  const [debugInfo, setDebugInfo] = useState<{ userId?: number; adminIds?: number[]; hasTelegram?: boolean; hasUser?: boolean; envAdminId?: string; envAdminIds?: string }>({});
   const [limit, setLimit] = useState(50);
   const [onlyErrors, setOnlyErrors] = useState(false);
 
@@ -75,6 +75,14 @@ export default function AdminLogs() {
     const tgWebApp = (window as any)?.Telegram?.WebApp;
     if (!tgWebApp) {
       console.warn("Telegram WebApp недоступен. Открывай через Mini App.");
+      setDebugInfo((d) => ({
+        ...d,
+        hasTelegram: false,
+        hasUser: false,
+        envAdminId: String(import.meta.env.VITE_ADMIN_ID ?? ""),
+        envAdminIds: String(import.meta.env.VITE_ADMIN_IDS ?? ""),
+        adminIds: ADMIN_IDS.length ? ADMIN_IDS : [FALLBACK_ADMIN_ID],
+      }));
       setLoading(false);
       return;
     }
@@ -83,13 +91,28 @@ export default function AdminLogs() {
       const tgUser = tgWebApp.initDataUnsafe?.user;
       if (!tgUser) {
         console.warn("Telegram user не определен. WebApp не передал данные.");
+        setDebugInfo((d) => ({
+          ...d,
+          hasTelegram: true,
+          hasUser: false,
+          envAdminId: String(import.meta.env.VITE_ADMIN_ID ?? ""),
+          envAdminIds: String(import.meta.env.VITE_ADMIN_IDS ?? ""),
+          adminIds: ADMIN_IDS.length ? ADMIN_IDS : [FALLBACK_ADMIN_ID],
+        }));
         setLoading(false);
         return;
       }
 
       const effectiveAdminIds = ADMIN_IDS.length > 0 ? ADMIN_IDS : [FALLBACK_ADMIN_ID];
       const currentUserId = Number(tgUser.id);
-      setDebugInfo({ userId: currentUserId, adminIds: effectiveAdminIds });
+      setDebugInfo({
+        userId: currentUserId,
+        adminIds: effectiveAdminIds,
+        hasTelegram: true,
+        hasUser: true,
+        envAdminId: String(import.meta.env.VITE_ADMIN_ID ?? ""),
+        envAdminIds: String(import.meta.env.VITE_ADMIN_IDS ?? ""),
+      });
       if (Number.isFinite(currentUserId) && effectiveAdminIds.includes(currentUserId)) {
         setAllowed(true);
         fetchEvents();
@@ -105,11 +128,16 @@ export default function AdminLogs() {
     return (
       <div style={{ padding: 20 }}>
         <p>Доступ запрещён</p>
-        {debugInfo.userId !== undefined && (
-          <p style={{ opacity: 0.7, fontSize: 12 }}>
-            Ваш user_id: {debugInfo.userId}. Разрешённые admin IDs: {debugInfo.adminIds?.join(", ") || "нет"}
-          </p>
-        )}
+        <div style={{ opacity: 0.8, fontSize: 12, marginTop: 8, lineHeight: 1.6 }}>
+          {debugInfo.userId !== undefined && (
+            <div>Ваш user_id: {debugInfo.userId}</div>
+          )}
+          <div>Разрешённые admin IDs: {debugInfo.adminIds?.join(", ") || "нет"}</div>
+          <div>VITE_ADMIN_ID: {debugInfo.envAdminId || "(не задан)"}</div>
+          <div>VITE_ADMIN_IDS: {debugInfo.envAdminIds || "(не задан)"}</div>
+          <div>Telegram WebApp: {String(debugInfo.hasTelegram)}</div>
+          <div>Telegram user: {String(debugInfo.hasUser)}</div>
+        </div>
         <p style={{ opacity: 0.7, fontSize: 12 }}>
           Задайте VITE_ADMIN_ID или VITE_ADMIN_IDS=comma,separated в .env мини-приложения, затем пересоберите.
         </p>
