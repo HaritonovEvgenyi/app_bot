@@ -88,8 +88,9 @@ export default function AdminLogs() {
       }
 
       const effectiveAdminIds = ADMIN_IDS.length > 0 ? ADMIN_IDS : [FALLBACK_ADMIN_ID];
-      setDebugInfo({ userId: tgUser.id, adminIds: effectiveAdminIds });
-      if (effectiveAdminIds.includes(tgUser.id)) {
+      const currentUserId = Number(tgUser.id);
+      setDebugInfo({ userId: currentUserId, adminIds: effectiveAdminIds });
+      if (Number.isFinite(currentUserId) && effectiveAdminIds.includes(currentUserId)) {
         setAllowed(true);
         fetchEvents();
       } else {
