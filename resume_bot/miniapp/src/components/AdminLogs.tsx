@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 // Supabase
@@ -7,120 +7,159 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY!
 );
 
-const ADMIN_ID = 74097192;
+const ADMIN_ID = Number(import.meta.env.VITE_ADMIN_ID) || 74097192;
 
-type Log = {
+type AnalyticsEvent = {
   id: number;
-  user_id: number;
+  created_at: string;
+  event_name: string;
+  user_id: number | null;
   username: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  date: string;
+  chat_id: number | null;
+  command: string | null;
+  message_text: string | null;
+  error_message: string | null;
+  meta: Record<string, unknown> | null;
 };
 
 export default function AdminLogs() {
-  const [logs, setLogs] = useState<Log[]>([]);
+  const [events, setEvents] = useState<AnalyticsEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
+  const [limit, setLimit] = useState(50);
+  const [onlyErrors, setOnlyErrors] = useState(false);
 
-  // Функция для загрузки логов
-  async function fetchLogs() {
-    const { data, error } = await supabase
-      .from("logs")
+  const columns = useMemo(
+    () => [
+      { key: "id", title: "ID" },
+      { key: "created_at", title: "Время" },
+      { key: "event_name", title: "Событие" },
+      { key: "user_id", title: "User ID" },
+      { key: "username", title: "Username" },
+      { key: "chat_id", title: "Chat ID" },
+      { key: "command", title: "Команда" },
+      { key: "message_text", title: "Текст" },
+      { key: "error_message", title: "Ошибка" },
+    ],
+    []
+  );
+
+  async function fetchEvents(options?: { limit?: number; onlyErrors?: boolean }) {
+    const take = options?.limit ?? limit;
+    const justErrors = options?.onlyErrors ?? onlyErrors;
+    let query = supabase
+      .from("analytics_events")
       .select("*")
-      .order("date", { ascending: false })
-      .limit(50);
+      .order("created_at", { ascending: false })
+      .limit(take);
 
-    if (error) console.error("Ошибка загрузки логов:", error);
-    else setLogs(data as Log[]);
+    if (justErrors) {
+      query = query.eq("event_name", "error");
+    }
 
+    const { data, error } = await query;
+    if (error) {
+      console.error("Ошибка загрузки событий:", error);
+    } else {
+      setEvents((data as AnalyticsEvent[]) ?? []);
+    }
     setLoading(false);
   }
 
-  // Функция для сохранения логов
-  async function saveLog(log: Omit<Log, "id">) {
-    const { error } = await supabase.from("logs").insert([log]);
-    if (error) console.error("Ошибка записи лога:", error);
-    else fetchLogs();
-  }
-
   useEffect(() => {
-    console.log("tgWebApp:", window.Telegram?.WebApp);
-    console.log("tgUser:", window.Telegram?.WebApp?.initDataUnsafe?.user);
-  }, [])
-
-  useEffect(() => {
-    const tgWebApp = window.Telegram?.WebApp;
-
+    const tgWebApp = (window as any)?.Telegram?.WebApp;
     if (!tgWebApp) {
       console.warn("Telegram WebApp недоступен. Открывай через Mini App.");
       setLoading(false);
       return;
     }
 
-    // Ждем готовности WebApp (100ms обычно достаточно)
     setTimeout(() => {
       const tgUser = tgWebApp.initDataUnsafe?.user;
-
       if (!tgUser) {
         console.warn("Telegram user не определен. WebApp не передал данные.");
         setLoading(false);
         return;
       }
 
-      // Сохраняем лог пользователя
-      if (tgUser) {
-             saveLog({
-        user_id: tgUser.id,
-        username: tgUser.username || null,
-        first_name: tgUser.first_name || null,
-        last_name: tgUser.last_name || null,
-        date: new Date().toISOString(),
-      });
-      }
- 
-
-      // Проверяем админа
       if (tgUser.id === ADMIN_ID) {
         setAllowed(true);
-        fetchLogs();
+        fetchEvents();
       } else {
         setAllowed(false);
         setLoading(false);
       }
-    }, 300);
+    }, 200);
   }, []);
 
-  if (loading) return <p>Загрузка логов...</p>;
-  if (!allowed) return <p>Доступа нет, вы не админ</p>;
+  if (loading) return <p>Загрузка...</p>;
+  if (!allowed) return <p>Доступ запрещён</p>;
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Логи пользователей бота</h1>
-      <table border={1} cellPadding={5} style={{ marginTop: 10 }}>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>User ID</th>
-            <th>Username</th>
-            <th>Имя</th>
-            <th>Фамилия</th>
-            <th>Дата</th>
-          </tr>
-        </thead>
-        <tbody>
-          {logs.map((log) => (
-            <tr key={log.id}>
-              <td>{log.id}</td>
-              <td>{log.user_id}</td>
-              <td>{log.username || "-"}</td>
-              <td>{log.first_name || "-"}</td>
-              <td>{log.last_name || "-"}</td>
-              <td>{new Date(log.date).toLocaleString()}</td>
+      <h2>Логи бота (analytics_events)</h2>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "10px 0" }}>
+        <label>
+          Показать только ошибки
+          <input
+            type="checkbox"
+            checked={onlyErrors}
+            onChange={(e) => {
+              setOnlyErrors(e.target.checked);
+              fetchEvents({ onlyErrors: e.target.checked });
+            }}
+            style={{ marginLeft: 8 }}
+          />
+        </label>
+        <label>
+          Лимит
+          <select
+            value={limit}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setLimit(v);
+              fetchEvents({ limit: v });
+            }}
+            style={{ marginLeft: 8 }}
+          >
+            {[25, 50, 100, 200].map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        </label>
+        <button onClick={() => fetchEvents()}>Обновить</button>
+      </div>
+
+      <div style={{ overflowX: "auto" }}>
+        <table border={1} cellPadding={6} style={{ marginTop: 10, minWidth: 900 }}>
+          <thead>
+            <tr>
+              {columns.map((c) => (
+                <th key={c.key}>{c.title}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {events.map((e) => (
+              <tr key={e.id}>
+                <td>{e.id}</td>
+                <td>{new Date(e.created_at).toLocaleString()}</td>
+                <td>{e.event_name}</td>
+                <td>{e.user_id ?? "-"}</td>
+                <td>{e.username ?? "-"}</td>
+                <td>{e.chat_id ?? "-"}</td>
+                <td>{e.command ?? "-"}</td>
+                <td style={{ maxWidth: 300, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {e.message_text ?? "-"}
+                </td>
+                <td style={{ color: e.event_name === "error" ? "#b00020" : undefined }}>
+                  {e.error_message ?? "-"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
