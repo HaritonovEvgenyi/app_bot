@@ -9,6 +9,12 @@ function App() {
     const tg = window.Telegram?.WebApp;
     if(tg) {
       tg.ready();
+      tg.expand(); // развернуть вебвью
+
+      const tp = tg.themeParams || {};
+      // Мягкий вариант: использовать цвета из темы
+      tg.setBackgroundColor(tp.bg_color || "#ffffff");
+      tg.setHeaderColor("bg_color");
       tg.MainButton.setText("Закрыть портфолио")
     }
   },[])

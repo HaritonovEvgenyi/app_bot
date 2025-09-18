@@ -230,18 +230,18 @@ export default function AdminLogs() {
           {debugInfo.userId !== undefined && (
             <div>Ваш user_id: {debugInfo.userId}</div>
           )}
-          <div>Разрешённые admin IDs: {debugInfo.adminIds?.join(", ") || "нет"}</div>
-          <div>VITE_ADMIN_ID: {debugInfo.envAdminId || "(не задан)"}</div>
-          <div>VITE_ADMIN_IDS: {debugInfo.envAdminIds || "(не задан)"}</div>
-          <div>ALLOW_LOCAL_DEBUG: {String(debugInfo.allowLocalDebug)}</div>
+          {/* <div>Разрешённые admin IDs: {debugInfo.adminIds?.join(", ") || "нет"}</div> */}
+          {/* <div>VITE_ADMIN_ID: {debugInfo.envAdminId || "(не задан)"}</div> */}
+          {/* <div>VITE_ADMIN_IDS: {debugInfo.envAdminIds || "(не задан)"}</div> */}
+          {/* <div>ALLOW_LOCAL_DEBUG: {String(debugInfo.allowLocalDebug)}</div> */}
           <div>Telegram WebApp: {String(debugInfo.hasTelegram)}</div>
           <div>Telegram user: {String(debugInfo.hasUser)}</div>
           {debugInfo.href && <div>URL: {debugInfo.href}</div>}
           {debugInfo.ua && <div>User-Agent: {debugInfo.ua}</div>}
         </div>
-        <p style={{ opacity: 0.7, fontSize: 12 }}>
+        {/* <p style={{ opacity: 0.7, fontSize: 12 }}>
           Задайте VITE_ADMIN_ID или VITE_ADMIN_IDS=comma,separated в .env мини-приложения, затем пересоберите.
-        </p>
+        </p> */}
       </div>
     );
 
