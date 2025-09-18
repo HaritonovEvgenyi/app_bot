@@ -12,6 +12,8 @@ const ADMIN_IDS: number[] = ((import.meta.env.VITE_ADMIN_IDS as string) || (impo
   .map((s) => Number(String(s).trim()))
   .filter((n) => Number.isFinite(n));
 const FALLBACK_ADMIN_ID = 74097192;
+const ALLOW_LOCAL_DEBUG = String(import.meta.env.VITE_ALLOW_LOCAL_DEBUG || "").toLowerCase() === "true";
+const DEBUG_USER_ID = Number(import.meta.env.VITE_DEBUG_USER_ID || NaN);
 
 type AnalyticsEvent = {
   id: number;
@@ -30,7 +32,7 @@ export default function AdminLogs() {
   const [events, setEvents] = useState<AnalyticsEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<{ userId?: number; adminIds?: number[]; hasTelegram?: boolean; hasUser?: boolean; envAdminId?: string; envAdminIds?: string }>({});
+  const [debugInfo, setDebugInfo] = useState<{ userId?: number; adminIds?: number[]; hasTelegram?: boolean; hasUser?: boolean; envAdminId?: string; envAdminIds?: string; ua?: string; href?: string; allowLocalDebug?: boolean }>({});
   const [limit, setLimit] = useState(50);
   const [onlyErrors, setOnlyErrors] = useState(false);
 
@@ -82,7 +84,21 @@ export default function AdminLogs() {
         envAdminId: String(import.meta.env.VITE_ADMIN_ID ?? ""),
         envAdminIds: String(import.meta.env.VITE_ADMIN_IDS ?? ""),
         adminIds: ADMIN_IDS.length ? ADMIN_IDS : [FALLBACK_ADMIN_ID],
+        ua: navigator.userAgent,
+        href: window.location.href,
+        allowLocalDebug: ALLOW_LOCAL_DEBUG,
       }));
+      if (ALLOW_LOCAL_DEBUG) {
+        // Allow viewing outside Telegram for debugging
+        const effectiveAdminIds = ADMIN_IDS.length > 0 ? ADMIN_IDS : [FALLBACK_ADMIN_ID];
+        const currentUserId = Number.isFinite(DEBUG_USER_ID) ? DEBUG_USER_ID : effectiveAdminIds[0];
+        setDebugInfo((d) => ({ ...d, userId: currentUserId }));
+        if (effectiveAdminIds.includes(currentUserId)) {
+          setAllowed(true);
+          fetchEvents();
+          return;
+        }
+      }
       setLoading(false);
       return;
     }
@@ -98,7 +114,20 @@ export default function AdminLogs() {
           envAdminId: String(import.meta.env.VITE_ADMIN_ID ?? ""),
           envAdminIds: String(import.meta.env.VITE_ADMIN_IDS ?? ""),
           adminIds: ADMIN_IDS.length ? ADMIN_IDS : [FALLBACK_ADMIN_ID],
+          ua: navigator.userAgent,
+          href: window.location.href,
+          allowLocalDebug: ALLOW_LOCAL_DEBUG,
         }));
+        if (ALLOW_LOCAL_DEBUG) {
+          const effectiveAdminIds = ADMIN_IDS.length > 0 ? ADMIN_IDS : [FALLBACK_ADMIN_ID];
+          const currentUserId = Number.isFinite(DEBUG_USER_ID) ? DEBUG_USER_ID : effectiveAdminIds[0];
+          setDebugInfo((d) => ({ ...d, userId: currentUserId }));
+          if (effectiveAdminIds.includes(currentUserId)) {
+            setAllowed(true);
+            fetchEvents();
+            return;
+          }
+        }
         setLoading(false);
         return;
       }
@@ -112,6 +141,9 @@ export default function AdminLogs() {
         hasUser: true,
         envAdminId: String(import.meta.env.VITE_ADMIN_ID ?? ""),
         envAdminIds: String(import.meta.env.VITE_ADMIN_IDS ?? ""),
+        ua: navigator.userAgent,
+        href: window.location.href,
+        allowLocalDebug: ALLOW_LOCAL_DEBUG,
       });
       if (Number.isFinite(currentUserId) && effectiveAdminIds.includes(currentUserId)) {
         setAllowed(true);
@@ -135,8 +167,11 @@ export default function AdminLogs() {
           <div>Разрешённые admin IDs: {debugInfo.adminIds?.join(", ") || "нет"}</div>
           <div>VITE_ADMIN_ID: {debugInfo.envAdminId || "(не задан)"}</div>
           <div>VITE_ADMIN_IDS: {debugInfo.envAdminIds || "(не задан)"}</div>
+          <div>ALLOW_LOCAL_DEBUG: {String(debugInfo.allowLocalDebug)}</div>
           <div>Telegram WebApp: {String(debugInfo.hasTelegram)}</div>
           <div>Telegram user: {String(debugInfo.hasUser)}</div>
+          {debugInfo.href && <div>URL: {debugInfo.href}</div>}
+          {debugInfo.ua && <div>User-Agent: {debugInfo.ua}</div>}
         </div>
         <p style={{ opacity: 0.7, fontSize: 12 }}>
           Задайте VITE_ADMIN_ID или VITE_ADMIN_IDS=comma,separated в .env мини-приложения, затем пересоберите.
