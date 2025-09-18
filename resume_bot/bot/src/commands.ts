@@ -73,7 +73,13 @@ export const commandsBot = (bot: Telegraf) => {
                     chat_id: ctx.chat.id as number,
                     command: "Погода в Москве",
                 });
-                const apiKey = process.env.WEATHER_API_KEY;
+                const apiKey =
+                    process.env.WEATHER_API_KEY ||
+                    process.env.OPENWEATHER_API_KEY ||
+                    process.env.OPENWEATHERMAP_API_KEY ||
+                    process.env.VITE_WEATHER_API_KEY ||
+                    process.env.VITE_OPENWEATHER_API_KEY ||
+                    process.env.VITE_OPENWEATHERMAP_API_KEY;
                 const city = "Moscow";
                 const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric&lang=ru`;
                 const res = await fetch(url)

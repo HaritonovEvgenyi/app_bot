@@ -4,7 +4,17 @@ import { commandsBot } from "./commands"
 import { logEvent } from "./analytics";
 dotenv.config();
 
-const bot = new Telegraf(process.env.BOT_TOKEN!);
+const botToken =
+  process.env.BOT_TOKEN ||
+  process.env.TELEGRAM_BOT_TOKEN ||
+  process.env.TG_BOT_TOKEN ||
+  process.env.VITE_BOT_TOKEN ||
+  process.env.VITE_TELEGRAM_BOT_TOKEN ||
+  process.env.VITE_TG_BOT_TOKEN;
+if (!botToken) {
+  throw new Error("Telegram bot token is not set. Define BOT_TOKEN or TELEGRAM_BOT_TOKEN");
+}
+const bot = new Telegraf(botToken);
 
 
 
